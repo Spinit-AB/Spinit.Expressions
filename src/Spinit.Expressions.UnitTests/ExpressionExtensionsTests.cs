@@ -13,10 +13,10 @@ namespace Spinit.Expressions.UnitTests
             [Fact]
             public void ToStringShouldMatchExpectation()
             {
-                Expression<Func<TestClass, bool>> firsts = x => x.Type == "Type";
+                Expression<Func<TestClass, bool>> first = x => x.Type == "Type";
                 Expression<Func<TestClass, bool>> second = y => y.Title == "Title";
                 Expression<Func<TestClass, bool>> expectedResult = x => x.Type == "Type" && x.Title == "Title";
-                var result = firsts.And(second);
+                var result = first.And(second);
                 Assert.Equal(expectedResult.ToString(), result.ToString());
             }
 
@@ -33,10 +33,10 @@ namespace Spinit.Expressions.UnitTests
             [Fact]
             public void ToStringShouldMatchExpectation()
             {
-                Expression<Func<TestClass, bool>> firsts = x => x.Type == "Type";
+                Expression<Func<TestClass, bool>> first = x => x.Type == "Type";
                 Expression<Func<TestClass, bool>> second = y => y.Title == "Title";
                 Expression<Func<TestClass, bool>> expectedResult = x => x.Type == "Type" || x.Title == "Title";
-                var result = firsts.Or(second);
+                var result = first.Or(second);
                 Assert.Equal(expectedResult.ToString(), result.ToString());
             }
 
@@ -54,8 +54,8 @@ namespace Spinit.Expressions.UnitTests
             public void ToStringShouldMatchExpectation()
             {
                 Expression<Func<Entity, DateTime>> expression = x => x.CreatedDate;
-                Expression<Func<EntityWrapper<Entity>, DateTime>> expectedResult = x => x.Entity.CreatedDate;
-                var result = expression.RemapTo<EntityWrapper<Entity>, Entity, DateTime>(x => x.Entity);
+                Expression<Func<EntityWrapper<Entity>, DateTime>> expectedResult = y => y.Entity.CreatedDate;
+                var result = expression.RemapTo<EntityWrapper<Entity>, Entity, DateTime>(y => y.Entity);
                 Assert.Equal(expectedResult.ToString(), result.ToString());
             }
 
@@ -63,7 +63,7 @@ namespace Spinit.Expressions.UnitTests
             public void UsingGetValueOrDefaultOnNullableTypesShouldWork()
             {
                 Expression<Func<Entity, bool>> expression = x => x.ModifiedDate.GetValueOrDefault(DateTime.MinValue) >= DateTime.UtcNow;
-                var result = expression.RemapTo<EntityWrapper<Entity>, Entity, bool>(x => x.Entity);
+                var result = expression.RemapTo<EntityWrapper<Entity>, Entity, bool>(y => y.Entity);
             }
 
             [Fact]
@@ -71,15 +71,31 @@ namespace Spinit.Expressions.UnitTests
             {
                 var now = DateTime.UtcNow;
                 Expression<Func<Entity, bool>> expression = x => x.ModifiedDate.GetValueOrDefault(DateTime.MinValue) >= now.AddDays(-7);
-                var predicate = expression.RemapTo<EntityWrapper<Entity>, Entity, bool>(x => x.Entity);
+                var predicate = expression.RemapTo<EntityWrapper<Entity>, Entity, bool>(y => y.Entity);
                 var list = new List<EntityWrapper<Entity>>
                 {
-                    new EntityWrapper<Entity>(new Entity{ Title = "ShouldBeFound", ModifiedDate = now.AddDays(-1) }),
-                    new EntityWrapper<Entity>(new Entity{ Title = "ShouldNotBeFound", ModifiedDate = null }),
+                    new EntityWrapper<Entity>(new Entity { Title = "ShouldBeFound", ModifiedDate = now.AddDays(-1) }),
+                    new EntityWrapper<Entity>(new Entity { Title = "ShouldNotBeFound", ModifiedDate = null }),
                 };
                 var result = list.AsQueryable().Where(predicate);
                 Assert.Contains(result, x => x.Entity.Title == "ShouldBeFound");
                 Assert.DoesNotContain(result, x => x.Entity.Title == "ShouldNotBeFound");
+            }
+
+            [Fact]
+            public void ParameterNamingShouldBeAgnostic()
+            {
+                var now = DateTime.UtcNow;
+                Expression<Func<Entity, bool>> expression = a => a.ModifiedDate.GetValueOrDefault(DateTime.MinValue) >= now.AddDays(-7);
+                var predicate = expression.RemapTo<EntityWrapper<Entity>, Entity, bool>(b => b.Entity);
+                var list = new List<EntityWrapper<Entity>>
+                {
+                    new EntityWrapper<Entity>(new Entity { Title = "ShouldBeFound", ModifiedDate = now.AddDays(-1) }),
+                    new EntityWrapper<Entity>(new Entity { Title = "ShouldNotBeFound", ModifiedDate = null }),
+                };
+                var result = list.AsQueryable().Where(predicate);
+                Assert.Contains(result, c => c.Entity.Title == "ShouldBeFound");
+                Assert.DoesNotContain(result, d => d.Entity.Title == "ShouldNotBeFound");
             }
 
             [Fact]
@@ -119,8 +135,8 @@ namespace Spinit.Expressions.UnitTests
             [Fact]
             public void UsingInterfacesShouldReturnExpectedResult()
             {
-                Expression<Func<IEntity, bool>> expression = x => x.Id == 1;
-                var predicate = expression.RemapTo<EntityWrapper<IEntity>, IEntity, bool>(x => x.Entity);
+                Expression<Func<IEntity, bool>> expression = a => a.Id == 1;
+                var predicate = expression.RemapTo<EntityWrapper<IEntity>, IEntity, bool>(b => b.Entity);
                 var list = new List<EntityWrapper<IEntity>>
                 {
                     new EntityWrapper<IEntity>(new Entity { Id = 1 }),
@@ -183,7 +199,7 @@ namespace Spinit.Expressions.UnitTests
                     _maxDateToInclude = maxDateToInclude;
                 }
 
-                public Expression<Func<T, bool>> Filter() => x => x.CreatedDate < _maxDateToInclude;
+                public Expression<Func<T, bool>> Filter() => t => t.CreatedDate < _maxDateToInclude;
             }
         }
     }
