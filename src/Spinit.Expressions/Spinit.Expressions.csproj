@@ -2,21 +2,22 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Configurations>Debug;Release</Configurations>
     <DocumentationFile>$(OutputDir)$(AssemblyName).xml</DocumentationFile>
-    <VersionPrefix>$(VersionPrefix)</VersionPrefix>
-    <VersionSuffix>$(VersionSuffix)</VersionSuffix>
   </PropertyGroup>
 
   <PropertyGroup>
+    <VersionPrefix>$(VersionPrefix)</VersionPrefix>
+    <VersionSuffix>$(VersionSuffix)</VersionSuffix>
     <PackageId>Spinit.Expressions</PackageId>
-    <Description>Description of Spinit.Expressions</Description>
+    <Description>Contains .NET Expression Helpers</Description>
     <Company>Spinit AB</Company>
     <Authors>Spinit AB</Authors>
     <Copyright>© Spinit AB. All rights reserved.</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Spinit-AB/Spinit.Expressions</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Spinit-AB/Spinit.Expressions</RepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
