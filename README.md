@@ -83,7 +83,7 @@ Metacode for this scenario:
 
     public class MyEntityFilter 
     {
-        public MyStatusEnum Status { get; set; }
+        public MyStatusEnum? Status { get; set; }
         public IEnumerable<string> Category { get; set; }
     }
 
@@ -100,3 +100,11 @@ Metacode for this scenario:
             return _entities.Where(predicate);
         }
     }
+
+
+Out of the box the `PredicateGenerator` handles "simple types", eg value types and strings. You can supply your own `IPropertyPredicateHandler` and add it using `PredicateGenerator.AddHandler`.
+
+Conventions: 
+ * The property name of the filter class and the entity must match.
+ * When using an enumerable on the filter class `Contains` is used, eg it should match any of the supplied values (OR).
+ * If the filter value is null (or an empty enumerable) no predicate is applied for the current property
