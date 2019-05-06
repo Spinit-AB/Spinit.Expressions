@@ -63,3 +63,40 @@ Example:
     Expression<Func<string, bool>> stringExpression = a => a == "123";
     var myClassExpression = stringExpression.RemapTo<MyClass, string, bool>(myClass => myClass.Id); // provide a path
     // myClassExpression: myClass => myClass.Id == "123"
+
+### Predicate generator
+
+This is a utility class for generating an expression on a class given another "filter" class.
+
+Example scenario: You have a webapi using some ORM (NHibernate, EntityFramework, Spinit.CosmosDb) and want to allow api users to supply a filter for your data.
+
+Metacode for this scenario:
+
+    public class MyEntity
+    {
+        public string Id { get; set; }
+        ... 
+        public MyStatusEnum Status { get; set; }
+        public string Category { get; set; }
+        ...
+    }
+
+    public class MyEntityFilter 
+    {
+        public MyStatusEnum Status { get; set; }
+        public IEnumerable<string> Category { get; set; }
+    }
+
+    public MyApiController : BaseController
+    {
+        private readonly IQueryable<MyEntity> _entities;
+
+        // WebApi action method
+        public IEnumerable<MyEntity> Get(MyEntityFilter filter)
+        {
+            var predicate = new PredicateBuilder<MyEntityFilter, MyEntity>().Generate(filter);
+            // if filter.Status and filter.Category is set the resulting expression looks like:
+            // x => x.Status == filter.Status && filter.Category.Contains(x.Category)
+            return _entities.Where(predicate);
+        }
+    }
