@@ -5,6 +5,9 @@ using System.Linq.Expressions;
 
 namespace Spinit.Expressions
 {
+    /// <summary>
+    /// Contains expression extensions
+    /// </summary>
     public static class ExpressionExtensions
     {
         /// <summary>
