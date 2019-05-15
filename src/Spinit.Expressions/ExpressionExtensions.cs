@@ -11,7 +11,7 @@ namespace Spinit.Expressions
     public static class ExpressionExtensions
     {
         /// <summary>
-        /// Combines two expressions using AndAlso (&amp;&amp;) and uses parameters from the first expression
+        /// Combines two predicates using AndAlso (&amp;&amp;) and uses parameters from the first expression.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="first"></param>
@@ -19,13 +19,11 @@ namespace Spinit.Expressions
         /// <returns></returns>
         public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
         {
-            if (first == null)
-                return second;
-            return first.Compose(second, Expression.AndAlso);
+            return first.Combine(second, Expression.AndAlso);
         }
 
         /// <summary>
-        /// Combines two expressions using OrElse (||) and uses parameters from the first expression
+        /// Combines two predicates using OrElse (||) and uses parameters from the first expression.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="first"></param>
@@ -33,9 +31,34 @@ namespace Spinit.Expressions
         /// <returns></returns>
         public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
         {
-            if (first == null)
-                return second;
-            return first.Compose(second, Expression.OrElse);
+            return first.Combine(second, Expression.OrElse);
+        }
+
+        /// <summary>
+        /// Combines a collection of predicates using the supplied operator and uses parameters from the first expression
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="predicates"></param>
+        /// <param name="combineOperator"></param>
+        /// <returns></returns>
+        public static Expression<Func<T, bool>> Combine<T>(this IEnumerable<Expression<Func<T, bool>>> predicates, CombineOperator combineOperator)
+        {
+            if (predicates == null || !predicates.Any())
+                return null;
+
+            Func<Expression, Expression, BinaryExpression> operatorFunc;
+            switch (combineOperator)
+            {
+                case CombineOperator.And:
+                    operatorFunc = Expression.AndAlso;
+                    break;
+                case CombineOperator.Or:
+                    operatorFunc = Expression.OrElse;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(combineOperator));
+            }
+            return predicates.Aggregate((Expression<Func<T, bool>>)null, (result, next) => result.Combine(next, operatorFunc));
         }
 
         /// <summary>
@@ -49,78 +72,43 @@ namespace Spinit.Expressions
         /// <returns></returns>
         public static Expression<Func<TTarget, TResult>> RemapTo<TTarget, TSource, TResult>(this Expression<Func<TSource, TResult>> source, Expression<Func<TTarget, TSource>> selector)
         {
-            var expression = RemapperExpressionVisitor<TTarget, TSource, TResult>.Map(source, selector) as LambdaExpression;
-            return Expression.Lambda<Func<TTarget, TResult>>(expression.Body, selector.Parameters);
+            var map = new Dictionary<ParameterExpression, Expression>
+            {
+                [source.Parameters.Single()] = selector.Body
+            };
+            var resultBody = new ParameterReplacerVisitor(map).Visit(source.Body);
+            return Expression.Lambda<Func<TTarget, TResult>>(resultBody, selector.Parameters);
         }
 
-        private static Expression<T> Compose<T>(this Expression<T> first, Expression<T> second, Func<Expression, Expression, Expression> mergeFunc)
+        private static Expression<T> Combine<T>(this Expression<T> first, Expression<T> second, Func<Expression, Expression, BinaryExpression> operatorFunc)
         {
-            var map = first.Parameters
-                .Select((f, i) => new { f, s = second.Parameters[i] })
-                .ToDictionary(p => p.s, p => p.f);
-            var secondBody = ParameterRebinder.ReplaceParameters(map, second.Body);
-            return Expression.Lambda<T>(mergeFunc(first.Body, secondBody), first.Parameters);
+            if (first == null || second == null)
+                return first ?? second;
+
+            var map = second.Parameters
+                .Zip(first.Parameters, (key, value) => new { key, value })
+                .ToDictionary(x => x.key, x => (Expression)x.value);
+            var secondBody = new ParameterReplacerVisitor(map).Visit(second.Body);
+            return Expression.Lambda<T>(operatorFunc(first.Body, secondBody), first.Parameters);
         }
 
-        private class ParameterRebinder : ExpressionVisitor
+        private class ParameterReplacerVisitor : ExpressionVisitor
         {
-            private readonly IDictionary<ParameterExpression, ParameterExpression> _parametersMap;
+            private readonly IDictionary<ParameterExpression, Expression> _parametersMap;
 
-            ParameterRebinder(Dictionary<ParameterExpression, ParameterExpression> parametersMap)
+            public ParameterReplacerVisitor(IDictionary<ParameterExpression, Expression> parametersMap)
             {
-                _parametersMap = parametersMap ?? new Dictionary<ParameterExpression, ParameterExpression>();
-            }
-
-            public static Expression ReplaceParameters(Dictionary<ParameterExpression, ParameterExpression> parametersMap, Expression expression)
-            {
-                return new ParameterRebinder(parametersMap).Visit(expression);
+                _parametersMap = parametersMap ?? new Dictionary<ParameterExpression, Expression>();
             }
 
             protected override Expression VisitParameter(ParameterExpression parameter)
             {
                 if (_parametersMap.TryGetValue(parameter, out var replacement))
                 {
-                    parameter = replacement;
+                    return replacement;
                 }
 
-                return base.VisitParameter(parameter);
-            }
-        }
-
-        private class RemapperExpressionVisitor<TTarget, TSource, TResult> : ExpressionVisitor
-        {
-            private readonly Expression<Func<TTarget, TSource>> _selector;
-
-            RemapperExpressionVisitor(Expression<Func<TTarget, TSource>> selector)
-            {
-                _selector = selector;
-            }
-
-            public static Expression Map(Expression<Func<TSource, TResult>> expression, Expression<Func<TTarget, TSource>> selector)
-            {
-                return new RemapperExpressionVisitor<TTarget, TSource, TResult>(selector).Visit(expression);
-            }
-
-            protected override Expression VisitMember(MemberExpression node)
-            {
-                if (
-                        node.Expression != null && 
-                        (node.Expression.NodeType == ExpressionType.Parameter || node.Expression.NodeType == ExpressionType.Convert) && 
-                        (node.Expression.Type == typeof(TSource) || node.Expression.Type.IsAssignableFrom(typeof(TSource))))
-                    return Expression.PropertyOrField(Visit(_selector.Body), node.Member.Name);
-                else
-                    return base.VisitMember(node);
-            }
-
-            protected override Expression VisitLambda<T>(Expression<T> node)
-            {
-                return Expression.Lambda<Func<TTarget, TResult>>(Visit(node.Body), _selector.Parameters);
-            }
-
-            protected override Expression VisitParameter(ParameterExpression node)
-            {
-                node = _selector.Parameters.Single(x => x.Name == node.Name);
-                return base.VisitParameter(node);
+                return parameter;
             }
         }
     }

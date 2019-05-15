@@ -5,51 +5,58 @@ using System.Reflection;
 namespace Spinit.Expressions
 {
     /// <summary>
-    /// Handles predicate for simple types (eg value types and strings)
+    /// Handles predicate for simple types
     /// </summary>
-    public class SimplePropertyTypePredicateHandler<TSource, TTarget> : IPropertyPredicateHandler<TSource, TTarget>
+    public class SimplePropertyTypePredicateHandler<TSource, TTarget> : BasePropertyPredicateHandler<TSource, TTarget>
+        where TSource : class
+        where TTarget : class
     {
         /// <summary>
-        /// Returns true if the property type is a simple type (eg value types and strings)
+        /// Returns true if the property type is a simple type
         /// </summary>
-        /// <param name="propertyInfo"></param>
+        /// <param name="sourceProperty"></param>
         /// <returns></returns>
-        public bool CanHandle(PropertyInfo propertyInfo)
+        public override bool CanHandle(PropertyInfo sourceProperty)
         {
-            var propertyType = propertyInfo.PropertyType;
-            bool isSimpleType(Type x) => x.IsValueType || x == typeof(string);
-            return
-                isSimpleType(propertyType) ||
-                propertyType.IsNullableOf(isSimpleType);
+            var targetProperty = GetTargetProperty(sourceProperty);
+            if (targetProperty == null)
+                return false;
+
+            var sourcePropertyType = sourceProperty.PropertyType;
+            if (sourcePropertyType.IsNullable())
+                sourcePropertyType = Nullable.GetUnderlyingType(sourcePropertyType);
+            if (sourcePropertyType.IsEnum)
+                sourcePropertyType = sourcePropertyType.GetEnumUnderlyingType();
+
+            var targetPropertyType = targetProperty.PropertyType;
+            if (targetPropertyType.IsNullable())
+                targetPropertyType = Nullable.GetUnderlyingType(targetPropertyType);
+            if (targetPropertyType.IsEnum)
+                targetPropertyType = targetPropertyType.GetEnumUnderlyingType();
+
+            return sourcePropertyType.IsSimple()
+                && targetPropertyType.IsSimple()
+                && targetPropertyType.IsEquatableOf(sourcePropertyType);
         }
 
         /// <summary>
-        /// Returns null is the property is null or a predicate on <typeparamref name="TSource"/>
+        /// Returns null if the property is null or a predicate on <typeparamref name="TSource"/>
         /// </summary>
         /// <param name="source"></param>
-        /// <param name="propertyInfo"></param>
+        /// <param name="sourceProperty"></param>
         /// <returns></returns>
-        public Expression<Func<TTarget, bool>> Handle(TSource source, PropertyInfo propertyInfo)
+        public override Expression<Func<TTarget, bool>> Handle(TSource source, PropertyInfo sourceProperty)
         {
-            var propertyValue = propertyInfo.GetValue(source);
-            if (propertyValue == null)
+            var sourcePropertyValue = sourceProperty.GetValue(source);
+            if (sourcePropertyValue == null)
                 return null;
 
-            var propertyType = propertyInfo.PropertyType;
-            var targetType = typeof(TTarget);
-            var targetPropery = targetType.GetProperty(propertyInfo.Name); // TODO: add support for attribute for setting target property name
-            if (targetPropery == null)
-                throw new Exception($"{targetType.Name} does not contain a property named {propertyInfo.Name}");
-
-            if (propertyType.IsNullable())
-                propertyType = Nullable.GetUnderlyingType(propertyType);
-
-            if (targetPropery.PropertyType != propertyType)
-                throw new Exception($"{targetPropery.Name} must be of type {propertyType.Name}");
-
-            var parameterExpression = Expression.Parameter(targetType, "x");
-            var propertyExpression = Expression.Property(parameterExpression, targetPropery);
-            var valueExpression = Expression.Constant(propertyValue, propertyType);
+            var targetProperty = GetTargetProperty(sourceProperty);
+            var parameterExpression = Expression.Parameter(typeof(TTarget), "x");
+            var propertyExpression = Expression.Property(parameterExpression, targetProperty);
+            Expression valueExpression = Expression.Constant(sourcePropertyValue);
+            if (sourcePropertyValue.GetType() != targetProperty.PropertyType)
+                valueExpression = Expression.Convert(valueExpression, targetProperty.PropertyType);
             var equalExpression = Expression.Equal(propertyExpression, valueExpression);
             var result = Expression.Lambda<Func<TTarget, bool>>(equalExpression, parameterExpression);
             return result;
