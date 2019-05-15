@@ -11,20 +11,23 @@ namespace Spinit.Expressions
     /// <typeparam name="TTarget">The type that the predicate should operate on</typeparam>
     /// <see cref="PredicateGenerator{TSource, TTarget}"/>
     public interface IPropertyPredicateHandler<TSource, TTarget>
+        where TSource : class
+        where TTarget : class
     {
         /// <summary>
-        /// Returns true if the property can be handled by this handler.
+        /// Returns true if the property can be handled by this handler, regardless of the actual value.
         /// </summary>
-        /// <param name="propertyInfo">The property to check</param>
-        /// <returns>True if the handler can handle this property</returns>
-        bool CanHandle(PropertyInfo propertyInfo);
+        /// <param name="sourceProperty">The property to check</param>
+        /// <returns>True if the handler can handle this property.</returns>
+        bool CanHandle(PropertyInfo sourceProperty);
 
         /// <summary>
-        /// Builds a predicate for the specified property.
+        /// Builds a predicate for the specified source property.
+        /// <para>Is only called if <see cref="CanHandle(PropertyInfo)"/> returns <see langword="true"/>.</para>
         /// </summary>
         /// <param name="source">The source filter</param>
-        /// <param name="propertyInfo">The property</param>
-        /// <returns>Returns a predicate or null if filter not set.</returns>
-        Expression<Func<TTarget, bool>> Handle(TSource source, PropertyInfo propertyInfo);
+        /// <param name="sourceProperty">The property</param>
+        /// <returns>Returns a predicate or null if value not set.</returns>
+        Expression<Func<TTarget, bool>> Handle(TSource source, PropertyInfo sourceProperty);
     }
 }

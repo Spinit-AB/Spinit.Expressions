@@ -9,7 +9,7 @@ namespace Spinit.Expressions
     /// <summary>
     /// Utility class for generating a predicate given a filter/dto. 
     /// <para>
-    /// Handles simple properties (eg value types and strings) custom handlers could be added via <see cref="AddHandler{THandler}()"/>
+    /// Handles simple properties, custom handlers could be added via <see cref="AddHandler{THandler}()"/>
     /// </para>
     /// </summary>
     /// <remarks>
@@ -72,32 +72,24 @@ namespace Spinit.Expressions
         public Expression<Func<TTarget, bool>> Generate(TSource source)
         {
             var predicates = new List<Expression<Func<TTarget, bool>>>();
-            foreach (var property in source.GetType().GetProperties())
+            foreach (var sourceProperty in source.GetType().GetProperties())
             {
-                var predicate = GenerateProperyPredicate(source, property);
+                var predicate = GeneratePropertyPredicate(source, sourceProperty);
                 if (predicate != null)
                     predicates.Add(predicate);
             }
-            // TODO: return predicates.Combine(Operator.And);
-            if (!predicates.Any())
-                return null;
-            var result = predicates.First();
-            foreach (var predicate in predicates.Skip(1))
-            {
-                result = result.And(predicate);
-            }
-            return result;
+            return predicates.Combine(CombineOperator.And);
         }
 
-        private Expression<Func<TTarget, bool>> GenerateProperyPredicate(TSource source, PropertyInfo property)
+        private Expression<Func<TTarget, bool>> GeneratePropertyPredicate(TSource source, PropertyInfo sourceProperty)
         {
             foreach (var propertyPredicateHandler in _propertyPredicateHandlers.Reverse())
             {
-                if (!propertyPredicateHandler.CanHandle(property))
+                if (!propertyPredicateHandler.CanHandle(sourceProperty))
                     continue;
-                return propertyPredicateHandler.Handle(source, property);
+                return propertyPredicateHandler.Handle(source, sourceProperty);
             }
-            throw new Exception($"No registered generator for type {property.PropertyType.Name}");
+            throw new Exception($"No registered handler for property {source.GetType().Name}.{sourceProperty.Name}");
         }
     }
 }
