@@ -2,6 +2,7 @@
 namespace Spinit.Expressions.UnitTests.TypeExpressions
 {
     using System;
+    using System.Linq;
     using System.Linq.Expressions;
     using Spinit.Expressions;
     using Xunit;
@@ -51,6 +52,36 @@ namespace Spinit.Expressions.UnitTests.TypeExpressions
         public void ShouldThrowArgumentExceptionWhenInvalidProperty()
         {
             Assert.Throws<ArgumentException>(() => TypeExpressions.GetPropertyExpression<TestClass>("ComputerSaysNo"));
+        }
+
+        [Fact]
+        public void DocumentationExampleShouldWork()
+        {
+            var data = new[]
+            {
+                new MyEntity
+                {
+                    Name = "b"
+                },
+                new MyEntity
+                {
+                    Name = "c"
+                },
+                new MyEntity
+                {
+                    Name = "a"
+                }
+            };
+            var orderBy = nameof(MyEntity.Name);
+            var _entities = data.AsQueryable();
+            var orderByExpression = TypeExpressions.GetPropertyExpression<MyEntity>(orderBy);
+            var orderedData = _entities.OrderBy(orderByExpression);
+            Assert.Equal(new[] { "a", "b", "c" }, orderedData.Select(x => x.Name).ToArray());
+        }
+
+        public class MyEntity
+        {
+            public string Name { get; set; }
         }
     }
 

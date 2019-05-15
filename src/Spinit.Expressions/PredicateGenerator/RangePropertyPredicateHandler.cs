@@ -42,14 +42,14 @@ namespace Spinit.Expressions
             if (targetPropertyType == typeof(TRange?))
             {
                 var nullCheck = Predicate.Of<TRange?>(x => x.HasValue);
-                Expression<Func<TRange?, TRange>> nullableReplacement = x => x.Value;
-                var nullablePredicate = predicate.Replace(nullableReplacement);
+                Expression<Func<TRange?, TRange>> valueSelector = x => x.Value;
+                var nullablePredicate = predicate.RemapTo(valueSelector);
                 nullablePredicate = nullCheck.And(nullablePredicate);
-                return nullablePredicate.Replace(TypeExpressions.GetPropertyExpression<TTarget, TRange?>(targetProperty.Name));
+                return nullablePredicate.RemapTo(TypeExpressions.GetPropertyExpression<TTarget, TRange?>(targetProperty.Name));
             }
             else
             {
-                return predicate.Replace(TypeExpressions.GetPropertyExpression<TTarget, TRange>(targetProperty.Name));
+                return predicate.RemapTo(TypeExpressions.GetPropertyExpression<TTarget, TRange>(targetProperty.Name));
             }
         }
 

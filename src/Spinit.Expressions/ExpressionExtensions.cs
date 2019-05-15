@@ -11,7 +11,7 @@ namespace Spinit.Expressions
     public static class ExpressionExtensions
     {
         /// <summary>
-        /// Combines two predicates using AndAlso (&amp;&amp;) and uses parameters from the first expression
+        /// Combines two predicates using AndAlso (&amp;&amp;) and uses parameters from the first expression.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="first"></param>
@@ -23,7 +23,7 @@ namespace Spinit.Expressions
         }
 
         /// <summary>
-        /// Combines two predicates using OrElse (||) and uses parameters from the first expression
+        /// Combines two predicates using OrElse (||) and uses parameters from the first expression.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="first"></param>
@@ -35,7 +35,7 @@ namespace Spinit.Expressions
         }
 
         /// <summary>
-        /// Combines a collection of predicates using the supplied operator
+        /// Combines a collection of predicates using the supplied operator and uses parameters from the first expression
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="predicates"></param>
@@ -70,29 +70,14 @@ namespace Spinit.Expressions
         /// <param name="source"></param>
         /// <param name="selector"></param>
         /// <returns></returns>
-        [Obsolete("Use Replace()")]
         public static Expression<Func<TTarget, TResult>> RemapTo<TTarget, TSource, TResult>(this Expression<Func<TSource, TResult>> source, Expression<Func<TTarget, TSource>> selector)
-        {
-            return source.Replace(selector);
-        }
-
-        /// <summary>
-        /// Replaces parameters in a lambda expression using a replacement expression.
-        /// </summary>
-        /// <typeparam name="TTarget"></typeparam>
-        /// <typeparam name="TSource"></typeparam>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="source"></param>
-        /// <param name="replacement"></param>
-        /// <returns></returns>
-        public static Expression<Func<TTarget, TResult>> Replace<TTarget, TSource, TResult>(this Expression<Func<TSource, TResult>> source, Expression<Func<TTarget, TSource>> replacement)
         {
             var map = new Dictionary<ParameterExpression, Expression>
             {
-                [source.Parameters.Single()] = replacement.Body
+                [source.Parameters.Single()] = selector.Body
             };
             var resultBody = new ParameterReplacerVisitor(map).Visit(source.Body);
-            return Expression.Lambda<Func<TTarget, TResult>>(resultBody, replacement.Parameters);
+            return Expression.Lambda<Func<TTarget, TResult>>(resultBody, selector.Parameters);
         }
 
         private static Expression<T> Combine<T>(this Expression<T> first, Expression<T> second, Func<Expression, Expression, BinaryExpression> operatorFunc)

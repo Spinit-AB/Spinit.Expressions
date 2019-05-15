@@ -47,9 +47,105 @@
         }
     }
 
+    public class Combine
+    {
+        [Fact]
+        public void WhenUsingAndToStringShouldMatchExpectation()
+        {
+            var predicates = new List<Expression<Func<TestClass, bool>>>
+            {
+                x => x.Id == 1,
+                x => x.Id == 2,
+                x => x.Id == 3,
+            };
+            Expression<Func<TestClass, bool>> expectedResult = x => x.Id == 1 && x.Id == 2 && x.Id == 3;
+            var result = predicates.Combine(CombineOperator.And);
+            Assert.Equal(expectedResult.ToString(), result.ToString());
+        }
+
+        [Fact]
+        public void AndDocumentationExampleShouldWork()
+        {
+            var predicates = new List<Expression<Func<string, bool>>>
+            {
+                x => x.Contains("a"),
+                y => y.Contains("b"),
+                z => z.Contains("c")
+            };
+            Expression<Func<string, bool>> expectedResult = x => x.Contains("a") && x.Contains("b") && x.Contains("c");
+            var result = predicates.Combine(CombineOperator.And);
+            Assert.Equal(expectedResult.ToString(), result.ToString());
+        }
+
+        [Fact]
+        public void WhenUsingOrToStringShouldMatchExpectation()
+        {
+            var predicates = new List<Expression<Func<TestClass, bool>>>
+            {
+                x => x.Id == 1,
+                x => x.Id == 2,
+                x => x.Id == 3,
+            };
+            Expression<Func<TestClass, bool>> expectedResult = x => x.Id == 1 || x.Id == 2 || x.Id == 3;
+            var result = predicates.Combine(CombineOperator.Or);
+            Assert.Equal(expectedResult.ToString(), result.ToString());
+        }
+
+        [Fact]
+        public void OrDocumentationExampleShouldWork()
+        {
+            var predicates = new List<Expression<Func<string, bool>>>
+            {
+                x => x.Contains("a"),
+                y => y.Contains("b"),
+                z => z.Contains("c")
+            };
+            Expression<Func<string, bool>> expectedResult = x => x.Contains("a") || x.Contains("b") || x.Contains("c");
+            var result = predicates.Combine(CombineOperator.Or);
+            Assert.Equal(expectedResult.ToString(), result.ToString());
+        }
+
+        public class TestClass
+        {
+            public int Id { get; set; }
+            public string Type { get; set; }
+            public string Title { get; set; }
+        }
+    }
+
     [Obsolete]
     public class RemapTo
     {
+        [Fact]
+        public void ExampleUsageShouldWork()
+        {
+            var predicate = Predicate.Of<int>(a => a > 10);
+            var propertyExpression = TypeExpressions.GetPropertyExpression<TestClass, int>(nameof(TestClass.IntProperty2));
+            var result = predicate.RemapTo(propertyExpression);
+            Assert.Equal("x => (x.IntProperty2 > 10)", result.ToString());
+        }
+
+        [Fact]
+        public void DocumentationExampleShouldWork()
+        {
+            Expression<Func<string, bool>> stringExpression = s => s == "123";
+            var myClassExpression = stringExpression.RemapTo((MyClass x) => x.Id);
+            var expectedResult = "x => (x.Id == \"123\")";
+            Assert.Equal(expectedResult, myClassExpression.ToString());
+        }
+
+        public class MyClass
+        {
+            public string Id { get; set; }
+        }
+
+        public class TestClass
+        {
+            public int IntProperty1 { get; set; }
+            public int IntProperty2 { get; set; }
+            public int IntProperty3 { get; set; }
+        }
+
         [Fact]
         public void ToStringShouldMatchExpectation()
         {
@@ -200,25 +296,6 @@
             }
 
             public Expression<Func<T, bool>> Filter() => t => t.CreatedDate < _maxDateToInclude;
-        }
-    }
-
-    public class Replace
-    {
-        [Fact]
-        public void ToStringShouldReturnExpectedResult()
-        {
-            var predicate = Predicate.Of<int>(a => a > 10);
-            var propertyExpression = TypeExpressions.GetPropertyExpression<TestClass, int>(nameof(TestClass.IntProperty2));
-            var result = predicate.Replace(propertyExpression);
-            Assert.Equal("x => (x.IntProperty2 > 10)", result.ToString());
-        }
-
-        public class TestClass
-        {
-            public int IntProperty1 { get; set; }
-            public int IntProperty2 { get; set; }
-            public int IntProperty3 { get; set; }
         }
     }
 }
