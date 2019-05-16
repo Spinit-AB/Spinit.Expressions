@@ -50,7 +50,7 @@ Example:
 ```csharp
 Expression<Func<int, bool>> first = x => x >= 10;
 Expression<Func<int, bool>> second = y => y <= -10;
-var result = first.And(second); // combines the expressions using OrElse
+var result = first.Or(second); // combines the expressions using OrElse
 // result expression: (int x) => x >= 10 || x <= -10
 ```
 
