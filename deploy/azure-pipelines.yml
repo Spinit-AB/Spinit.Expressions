@@ -53,7 +53,7 @@ steps:
   inputs:
     command: build
     arguments: --configuration $(BuildConfiguration) /p:VersionPrefix=$(VersionPrefix) /p:VersionSuffix=$(VersionSuffix)
-    projects: '**/*.csproj'
+    projects: '**/*.sln'
 
 - task: DotNetCoreCLI@2
   displayName: .NET Core Test
