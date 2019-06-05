@@ -8,10 +8,7 @@ namespace Spinit.Expressions
         {
             if (source != null)
             {
-                foreach (var item in source)
-                {
-                    return false;
-                }
+                return !source.GetEnumerator().MoveNext();
             }
             return true;
         }
